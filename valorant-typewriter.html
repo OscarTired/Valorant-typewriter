@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HUD Typewriter</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #ff4655;
+    --red-glow: rgba(255,70,85,0.5);
+    --teal: #00e5c8;
+    --teal-glow: rgba(0,229,200,0.4);
+    --white: #ece8e1;
+    --dark: #0a1520;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: #060c14;
+    background-image:
+      radial-gradient(ellipse at 30% 50%, rgba(255,70,85,0.06) 0%, transparent 55%),
+      radial-gradient(ellipse at 70% 50%, rgba(0,229,200,0.04) 0%, transparent 55%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  /* ── NOISE ── */
+  .noise {
+    position: fixed; inset:0; pointer-events:none; z-index:999;
+    opacity: 0.022;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px;
+    animation: noiseShift 0.4s steps(1) infinite;
+  }
+
+  /* ── WRAPPER ── */
+  .hud-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  /* ── STATIC LABEL ── */
+  .static-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: rgba(236,232,225,0.3);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .static-label::before {
+    content: '';
+    width: 16px; height: 1px;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red-glow);
+  }
+
+  /* ── MAIN TEXT ROW ── */
+  .typewriter-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Prefix bracket */
+  .bracket {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 36px;
+    color: var(--red);
+    text-shadow: 0 0 12px var(--red-glow);
+    line-height: 1;
+    opacity: 0.7;
+    user-select: none;
+    animation: bracketPulse 3s ease-in-out infinite;
+  }
+
+  /* The text */
+  .typewriter-text {
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--white);
+    text-shadow: 0 0 30px rgba(255,255,255,0.06);
+    white-space: nowrap;
+    padding: 0 10px;
+    min-width: 2ch;
+    position: relative;
+    line-height: 1;
+  }
+
+  /* Cursor */
+  .cursor {
+    display: inline-block;
+    width: 3px;
+    height: 0.85em;
+    background: var(--red);
+    box-shadow: 0 0 10px var(--red-glow), 0 0 20px var(--red-glow);
+    vertical-align: middle;
+    margin-left: 4px;
+    animation: cursorBlink 0.75s step-end infinite;
+    flex-shrink: 0;
+  }
+
+  /* ── SCANLINE on text ── */
+  .typewriter-row::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent, transparent 3px,
+      rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 6px
+    );
+    pointer-events: none;
+    animation: scanScroll 10s linear infinite;
+  }
+
+  /* ── BOTTOM BAR ── */
+  .bottom-bar {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .progress-track {
+    flex: 1;
+    height: 2px;
+    background: rgba(255,70,85,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red), var(--teal));
+    box-shadow: 0 0 6px var(--red-glow);
+    width: 0%;
+  }
+
+  /* Dots */
+  .dots {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .dot {
+    width: 5px; height: 5px;
+    border: 1px solid rgba(255,70,85,0.3);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .dot.active {
+    background: var(--red);
+    border-color: var(--red);
+    box-shadow: 0 0 8px var(--red-glow);
+  }
+
+  /* ── GLITCH layers ── */
+  .glitch-wrap {
+    position: relative;
+    display: inline-block;
+  }
+
+  .glitch-clone {
+    position: absolute;
+    top: 0; left: 0;
+    color: var(--teal);
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes cursorBlink {
+    0%,100% { opacity:1; }
+    50% { opacity:0; }
+  }
+  @keyframes bracketPulse {
+    0%,100% { opacity:0.5; }
+    50% { opacity:0.9; text-shadow: 0 0 18px var(--red-glow); }
+  }
+  @keyframes scanScroll {
+    from { background-position: 0 0; }
+    to { background-position: 0 40px; }
+  }
+  @keyframes noiseShift {
+    0% { background-position: 0 0; }
+    33% { background-position: 8px 4px; }
+    66% { background-position: -4px 12px; }
+    100% { background-position: 0 0; }
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="hud-wrap">
+  <div class="static-label">AGENT CLASSIFICATION</div>
+
+  <div class="typewriter-row">
+    <span class="bracket">[</span>
+    <div class="glitch-wrap">
+      <span class="typewriter-text" id="tw-text"></span>
+      <span class="glitch-clone" id="tw-clone"></span>
+    </div>
+    <span class="cursor" id="cursor"></span>
+    <span class="bracket">]</span>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="progress-track">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+    <div class="dots" id="dots"></div>
+  </div>
+</div>
+
+<script>
+  const words = [
+    { text: 'Full Stack Developer', color: '#ff4655' },
+    { text: 'Data Engineer',        color: '#00e5c8' },
+    { text: 'AI Specialist',        color: '#d4a843' },
+  ];
+
+  const twText    = document.getElementById('tw-text');
+  const twClone   = document.getElementById('tw-clone');
+  const cursor    = document.getElementById('cursor');
+  const progress  = document.getElementById('progress');
+  const dotsWrap  = document.getElementById('dots');
+
+  // Build dots
+  const dots = words.map((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    dotsWrap.appendChild(d);
+    return d;
+  });
+
+  // Config
+  const TYPE_SPEED   = 65;   // ms per char (typing)
+  const DELETE_SPEED = 35;   // ms per char (deleting)
+  const HOLD_TIME    = 2200; // ms to hold full word
+  const PAUSE_BEFORE = 400;  // ms pause before typing next
+
+  // Glitch chars
+  const glitchChars = '▓▒░█▀▄■□◆◇#@!%&*';
+
+  let wordIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+  let progressFrame = null;
+
+  function setColor(color) {
+    twText.style.color = color;
+    twText.style.textShadow = `0 0 24px ${color}80, 0 0 8px ${color}40`;
+    cursor.style.background = color;
+    cursor.style.boxShadow = `0 0 10px ${color}, 0 0 20px ${color}60`;
+    twClone.style.color = color;
+  }
+
+  function updateDots(idx) {
+    dots.forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+      if (i === idx) {
+        d.style.background = words[idx].color;
+        d.style.borderColor = words[idx].color;
+        d.style.boxShadow = `0 0 8px ${words[idx].color}80`;
+      } else {
+        d.style.background = '';
+        d.style.borderColor = '';
+        d.style.boxShadow = '';
+      }
+    });
+  }
+
+  function startProgress(duration) {
+    cancelAnimationFrame(progressFrame);
+    progress.style.transition = 'none';
+    progress.style.width = '0%';
+    progressFrame = requestAnimationFrame(() => {
+      progress.style.transition = `width ${duration}ms linear`;
+      progress.style.width = '100%';
+    });
+  }
+
+  // Glitch flash on transition
+  function triggerGlitch(text, color) {
+    twClone.textContent = text;
+    twClone.style.color = color;
+    let flashes = 0;
+    const iv = setInterval(() => {
+      twClone.style.opacity = flashes % 2 === 0 ? '0.7' : '0';
+      twClone.style.transform = `translateX(${(Math.random()-.5)*6}px) scaleY(${0.95+Math.random()*0.1})`;
+      flashes++;
+      if (flashes > 6) {
+        clearInterval(iv);
+        twClone.style.opacity = '0';
+        twClone.style.transform = '';
+      }
+    }, 50);
+  }
+
+  // Scramble effect while typing (first few chars)
+  function scrambleChar(real) {
+    if (Math.random() > 0.35) return real;
+    return glitchChars[Math.floor(Math.random() * glitchChars.length)];
+  }
+
+  function type() {
+    const word  = words[wordIndex];
+    const full  = word.text;
+    setColor(word.color);
+    updateDots(wordIndex);
+
+    if (!isDeleting) {
+      // Typing
+      charIndex++;
+      const displayed = full.slice(0, charIndex);
+      // Light scramble on newly typed char
+      twText.textContent = displayed.slice(0,-1) + scrambleChar(displayed.slice(-1));
+      // Instantly correct scramble
+      setTimeout(() => { twText.textContent = displayed; }, 40);
+
+      if (charIndex === full.length) {
+        // Done typing — start hold progress bar
+        startProgress(HOLD_TIME);
+        setTimeout(() => { isDeleting = true; type(); }, HOLD_TIME);
+        return;
+      }
+      setTimeout(type, TYPE_SPEED + Math.random() * 30);
+
+    } else {
+      // Deleting
+      charIndex--;
+      twText.textContent = full.slice(0, charIndex);
+
+      if (charIndex === 0) {
+        isDeleting = false;
+        wordIndex = (wordIndex + 1) % words.length;
+        const next = words[wordIndex];
+        triggerGlitch(words[(wordIndex - 1 + words.length) % words.length].text, next.color);
+        setTimeout(type, PAUSE_BEFORE);
+        return;
+      }
+      setTimeout(type, DELETE_SPEED + Math.random() * 15);
+    }
+  }
+
+  // Kick off
+  setTimeout(type, 600);
+</script>
+</body>
+</html>
