@@ -72,3 +72,5 @@ This demo is useful if you want to:
 - Reuse a stylish hero or intro effect in a portfolio or landing page
 - Learn how timing, DOM updates, and visual feedback can work together
 - Build on top of a compact, beginner-friendly vanilla setup
+
+![valorant-typewriter](https://github.com/user-attachments/assets/5cbae68f-2381-4f9d-98eb-8bc90ab4cc4a)
