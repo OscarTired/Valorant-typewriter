@@ -20,7 +20,7 @@ I put this together as a fun project to recreate that tactical, gamey feel—com
 You do not need to install anything or run any build commands.
 
 1. Clone this repository: `git clone https://github.com/OscarTired/Valorant-typewriter.git`
-2. Open `valorant-typewriter.html` in your favorite browser.
+2. Open `index.html` in your favorite browser.
 3. That is it. No frameworks, no headaches.
 
 ## Features
@@ -41,7 +41,7 @@ You do not need to install anything or run any build commands.
 
 ## Customization
 
-You can personalize the effect directly inside `valorant-typewriter.html`.
+You can personalize the effect directly inside `index.html`.
 
 ### Edit the rotating text
 Update the `words` array to change the displayed labels and colors.
@@ -61,7 +61,7 @@ Change the CSS custom properties in `:root` to tweak the color palette, glow, an
 ```text
 .
 ├── README.md
-└── valorant-typewriter.html
+└── index.html
 ```
 
 ## Why This Project
